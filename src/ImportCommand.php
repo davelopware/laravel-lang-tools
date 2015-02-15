@@ -1,6 +1,7 @@
 <?php namespace Tlr\LaravelLangTools;
 
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
@@ -111,7 +112,12 @@ class ImportCommand extends Command {
 			{
 				// $value[0] is the lang key
 				// $value[$xi] is the translation of that key for the $xi'th language column
-				$lang[$value[0]] = array_get($value, $xi);
+				$translation = array_get($value, $xi);
+				$importRaw = $this->boolFromYN($this->option('raw'));
+				if ( ! $importRaw) {
+					$translations = e($translation);
+				}
+				$lang[$value[0]] = $translation;
 			}
 
 			// add the header and its data to the output array
@@ -198,18 +204,29 @@ class ImportCommand extends Command {
 		{
 			$this->info("Unpacking Language: $slug");
 
-			$files->makeDirectory( "{$path}/{$slug}" );
-
+			$files->makeDirectory( "{$path}/{$slug}", 0777, true, true );
+			
+			$configTabsToSpaces = Config::get('laravel-lang-tools::tabs_to_spaces');
+			$configSpacesPerTab = Config::get('laravel-lang-tools::spaces_per_tab');
+			$indentWith = ($configTabsToSpaces) ? str_repeat(" ", $configSpacesPerTab) : "\t";
+			
+			$importRaw = $this->boolFromYN($this->option('raw'));
+			$this->comment(' writing '.($importRaw?'raw':'htmlencoded'));
+			
 			foreach ($data as $key => $items)
 			{
 				$this->comment("  - Writing Lang Namespace: $key");
 
 				$files->put(
 					"{$path}/{$slug}/{$key}.php",
-					View::make('laravel-lang-tools::lang', ['items' => $items])->render()
+					View::make('laravel-lang-tools::lang', ['items' => $items, 'indentWith' => $indentWith])->render()
 				);
 			}
 		}
+	}
+	
+	protected function boolFromYN($yn) {
+		return (strtolower($yn) === 'y');
 	}
 
 	/**
@@ -224,4 +241,17 @@ class ImportCommand extends Command {
 			[ 'output', InputArgument::OPTIONAL, 'The directory to output to - relative to the project dir.', 'lang' ],
 		);
 	}
+
+	/**
+	 * Get the console command options.
+	 *
+	 * @return array
+	 */
+	protected function getOptions()
+	{
+		return array(
+			array('raw', 'r', InputOption::VALUE_OPTIONAL, 'Force raw import of the translations - ie don\'t use htmlentities. y | n', 'n'),
+		);
+	}
+
 }

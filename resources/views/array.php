@@ -1,20 +1,15 @@
 <?php
-
 if ( ! isset($level) )
 {
 	$level = 0;
 }
-
-$z = '';
-
-for ( $xi=0; $xi < $level; $xi++ )
-{
-	$z .= "\t";
-}
-
+$indentStr = str_repeat($indentWith, $level)
 ?>
-<?php echo $z; ?>array(
+<?php echo $indentStr; ?>array(
 <?php foreach( $items as $key => $item ): ?>
-<?php echo $z; ?>	"<?php echo e($key) ?>" => <?php echo  is_array($item) ? View::make('laravel-lang-tools::array', array('level' => $level + 1, 'items' => $item))->render() : '"'.e($item).'"' ; ?>,
+<?php
+    echo $indentStr.$indentWith.'"'.e($key).'" => ';
+    echo (is_array($item)) ? View::make('laravel-lang-tools::array', array('level' => $level + 1, 'items' => $item,'indentWith'=>$indentWith))->render() : '"'.str_replace('""','\"',$item).'"';
+?>,
 <?php endforeach ?>
-<?php echo $z; ?>)
+<?php echo $indentStr; ?>)

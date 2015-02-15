@@ -43,7 +43,6 @@ class LaravelLangToolsServiceProvider extends ServiceProvider {
 
 		// Add the application view path first
 		$appViewPath = $this->getAppViewPath($package);
-
 		if ($this->app['files']->isDirectory($appViewPath))
 		{
 			$this->app['view']->addNamespace($namespace, $appViewPath);
@@ -52,10 +51,15 @@ class LaravelLangToolsServiceProvider extends ServiceProvider {
 		// Register the package view path
 		if ( $viewPath = realpath(__DIR__ . '/../resources/views') )
 		{
-
 			$this->app['view']->addNamespace($namespace, $viewPath);
 		}
-	}
+
+		// Register the package config path
+		if ( $configPath = realpath(__DIR__ . '/../resources/config') )
+		{
+			$this->app['config']->addNamespace($namespace, $configPath);
+		}
+    }
 
 	/**
 	 * Get the services provided by the provider.

@@ -1,6 +1,7 @@
 <?php namespace Tlr\LaravelLangTools;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Config;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 
@@ -176,10 +177,13 @@ class ExportCommand extends Command {
 			for ($xi = 0; $xi < $cols; $xi++)
 			{
 				$cell = array_get( $row, $xi );
+				if (Config::get('laravel-lang-tools::escape_double_quotes') !== FALSE) {
+					$cell = str_replace('"', '""', $cell); // escape double quotes with another quote (for excel)
+				}
 				$rowData[] = "\"$cell\"";
 			}
 
-			$this->line( implode(', ', $rowData) );
+			$this->line( implode(',', $rowData) );
 		}
 	}
 
