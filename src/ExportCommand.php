@@ -1,7 +1,6 @@
 <?php namespace Tlr\LaravelLangTools;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Config;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 
@@ -66,11 +65,13 @@ class ExportCommand extends Command {
 	 */
 	public function getLanguages()
 	{
-		$languages = array();
+		$languages = $this->option('lang');
 
-		foreach ($this->laravel['files']->directories(app_path( 'lang' )) as $folder)
-		{
-			$languages[] = basename($folder);
+		if (count($languages) === 0) {
+			foreach ($this->laravel['files']->directories(app_path( 'lang' )) as $folder)
+			{
+				$languages[] = basename($folder);
+			}
 		}
 
 		return $languages;
@@ -174,16 +175,33 @@ class ExportCommand extends Command {
 		{
 			$rowData = array();
 
+			$quoteEscaping = ( ! $this->option('quote-escaping-off'));
+			$blankCellFound = false;
+			$untranslatedRowFound = false;
+			
 			for ($xi = 0; $xi < $cols; $xi++)
 			{
 				$cell = array_get( $row, $xi );
-				if (Config::get('laravel-lang-tools::escape_double_quotes') !== FALSE) {
+				if (empty(trim($cell))) {
+					$blankCellFound = true;
+				}
+				if ($quoteEscaping) {
 					$cell = str_replace('"', '""', $cell); // escape double quotes with another quote (for excel)
 				}
 				$rowData[] = "\"$cell\"";
+				
+				if ($cols === 3 && $xi === 2 && $rowData[1] === $rowData[2]) {
+					$untranslatedRowFound = true;
+				}
 			}
 
-			$this->line( implode(',', $rowData) );
+			$filterNotSpecified = ! ($this->option('untranslated') || $this->option('missing'));
+			$untranslatedFilterPass = ($this->option('untranslated') && $untranslatedRowFound);
+			$missingFilterPass = ($this->option('missing') && $blankCellFound);
+			$filterPass = $untranslatedFilterPass || $missingFilterPass;
+			if ($filterNotSpecified || $filterPass) {
+				$this->line( implode(',', $rowData) );
+			}
 		}
 	}
 
@@ -210,6 +228,10 @@ class ExportCommand extends Command {
 	{
 		return array(
 			array('format', 'f', InputOption::VALUE_OPTIONAL, 'The format to display. table | csv', 'table'),
+			array('missing', 'm', InputOption::VALUE_NONE, 'Only output rows with missing translations (csv mode only).'),
+			array('untranslated', 'u', InputOption::VALUE_NONE, 'Only output rows untranslated values ie identical translations (csv mode only, and only with 2 languages).'),
+			array('quote-escaping-off', 'nqe', InputOption::VALUE_NONE, 'Turn off escaping of double quotes (csv mode only)'),
+			array('lang', 'L', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Export the specified language (can be used multiple times)'),
 		);
 	}
 
